@@ -33,7 +33,7 @@ getDirectionSequence path directions =
                         -- I'd rather scream bloody murder here, but don't know how 
                         -- I wonder if there's a way to map and at the same time extract the value from Maybe OR throw/return an error on Nothing
                         Nothing -> []
-            Nothing -> directions
+            Nothing -> List.reverse directions
 
 getPathTraveledDirections : String -> List Direction
 getPathTraveledDirections pathTraveled = getDirectionSequence pathTraveled []
@@ -54,14 +54,16 @@ goDirection direction coord =
 
 getCoordsTraveled : List Direction -> Set Coord
 getCoordsTraveled directions = 
-    fromList ((0, 0) :: (scanl goDirection (0, 0) directions))
+    fromList (scanl goDirection (0, 0) directions)
 
 directions : List Direction
 directions = (getPathTraveledDirections pathTraveled)
 
+-- part 1
 numUniqueHousesTraveledByJustSanta : Int
 numUniqueHousesTraveledByJustSanta = Set.size (getCoordsTraveled directions)
 
+-- part 2
 getEven : List a -> List a
 getEven l = (List.map snd (List.filter (\x -> (fst x)%2==0) (List.indexedMap (,) l)))
 
@@ -77,6 +79,7 @@ housesTraveledByRobo = getCoordsTraveled (getOdd directions)
 numUniqueHousesTraveledBySantaAndRobo : Int
 numUniqueHousesTraveledBySantaAndRobo = Set.size (Set.union housesTraveledBySanta housesTraveledByRobo)
 
+-- output
 printNumHousesTraveled : IO ()
 printNumHousesTraveled = 
     putStrLn ("unique houses visited by just santa (year 1): " ++ (toString numUniqueHousesTraveledByJustSanta)) >>> 
