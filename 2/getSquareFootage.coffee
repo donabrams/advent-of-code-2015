@@ -13,8 +13,18 @@ getSquareFootage = (presentDimensionsList) ->
 	(wrapIt dimension for dimension in parseDimensionsList presentDimensionsList)
 		.reduce (totalFootage, addtlFootage) -> totalFootage + addtlFootage
 
+tieIt = ([x, y, z]) ->
+	max = Math.max x, y, z
+	x*y*z + 2*(x+y+z-max)
+
+getBowLength = (presentDimensionsList) ->
+	(tieIt dimension for dimension in parseDimensionsList presentDimensionsList)
+		.reduce (totalFootage, addtlFootage) -> totalFootage + addtlFootage
+
 module.exports = 
 	wrapIt: wrapIt
 	parseDimensions: parseDimensions
 	parseDimensionsList: parseDimensionsList
-	getSquareFootage: getSquareFootage
+	getSquareFootage: getSquareFootage,
+	tieIt: tieIt,
+	getBowLength: getBowLength

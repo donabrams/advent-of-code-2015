@@ -1,4 +1,4 @@
-{getSquareFootage} = require './getSquareFootage'
+{getSquareFootage, getBowLength} = require './getSquareFootage'
 
 presentDimensionsList = """20x3x11
 15x27x5
@@ -1002,3 +1002,4 @@ presentDimensionsList = """20x3x11
 14x12x8"""
 
 console.log( getSquareFootage presentDimensionsList )
+console.log( getBowLength presentDimensionsList )
