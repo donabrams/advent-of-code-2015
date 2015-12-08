@@ -1,0 +1,16 @@
+{
+  "name": "advent-2015-day2",
+  "version": "1.0.0",
+  "description": "advent of code day 2",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --compilers coffee:coffee-script/register test.coffee",
+    "start": "coffee index"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^3.4.1",
+    "mocha": "^2.3.4"
+  }
+}
