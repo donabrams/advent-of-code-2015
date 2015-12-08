@@ -5,6 +5,7 @@ It's been a while since I wrote anything production ready but javascript, so thi
 
 Day 1: Javascript (ES6)
 Day 2: Coffeescript
+Day 3: Elm
 
 Others coming:
 Elm
