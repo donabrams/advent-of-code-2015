@@ -30,7 +30,8 @@ getDirectionSequence path directions =
                     case direction of
                         Just d -> getDirectionSequence rest (d :: directions)
                         -- This is a little strange, returning List.Empty if any of the path String is invalid. 
-                        --  I'd rather scream bloody murder here, but don't know how 
+                        -- I'd rather scream bloody murder here, but don't know how 
+                        -- I wonder if there's a way to map and at the same time extract the value from Maybe OR throw/return an error on Nothing
                         Nothing -> []
             Nothing -> directions
 
@@ -53,13 +54,33 @@ goDirection direction coord =
 
 getCoordsTraveled : List Direction -> Set Coord
 getCoordsTraveled directions = 
-    fromList (scanl goDirection (0, 0) directions)
+    fromList ((0, 0) :: (scanl goDirection (0, 0) directions))
 
-numHousesTraveled : Int
-numHousesTraveled = List.length (Set.toList (getCoordsTraveled (getPathTraveledDirections pathTraveled)))
+directions : List Direction
+directions = (getPathTraveledDirections pathTraveled)
+
+numUniqueHousesTraveledByJustSanta : Int
+numUniqueHousesTraveledByJustSanta = Set.size (getCoordsTraveled directions)
+
+getEven : List a -> List a
+getEven l = (List.map snd (List.filter (\x -> (fst x)%2==0) (List.indexedMap (,) l)))
+
+getOdd : List a -> List a
+getOdd l = (List.map snd (List.filter (\x -> (fst x)%2==1) (List.indexedMap (,) l)))
+
+housesTraveledBySanta : Set Coord
+housesTraveledBySanta = getCoordsTraveled (getEven directions)
+
+housesTraveledByRobo : Set Coord
+housesTraveledByRobo = getCoordsTraveled (getOdd directions)
+
+numUniqueHousesTraveledBySantaAndRobo : Int
+numUniqueHousesTraveledBySantaAndRobo = Set.size (Set.union housesTraveledBySanta housesTraveledByRobo)
 
 printNumHousesTraveled : IO ()
-printNumHousesTraveled = putStrLn (toString numHousesTraveled) >>> 
+printNumHousesTraveled = 
+    putStrLn ("unique houses visited by just santa (year 1): " ++ (toString numUniqueHousesTraveledByJustSanta)) >>> 
+    putStrLn ("unique houses visited by santa & robo (year 2): " ++ (toString numUniqueHousesTraveledBySantaAndRobo)) >>> 
     exit 0
 
 port runner : Signal (Task.Task x ())
