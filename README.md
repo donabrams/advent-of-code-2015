@@ -11,6 +11,8 @@ Day 3: Elm
 
 Day 4: Bash
 
+Day 5: LOLCODE
+
 Others coming:
 * Ruby
 * Python
@@ -30,6 +32,5 @@ Others coming:
 * Julia
 * Perl
 * PHP
-* LOLCODE
 * Erlang
 * Elixir
