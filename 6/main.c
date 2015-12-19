@@ -3,7 +3,6 @@
 int main(void)
 {
 	char * regexString = "(turn on|turn off|toggle) ([[:digit:]]+),([[:digit:]]+) through ([[:digit:]]+),([[:digit:]]+)";
-	printf("%s\n", regexString);
 	FILE * directions;
 	char * line = NULL;
 	size_t len = 0;
@@ -16,7 +15,6 @@ int main(void)
 		exit(EXIT_FAILURE);
     };
 	regmatch_t matches[regexCompiled.re_nsub+1];
-	printf("num subexpressions: %lu\n", regexCompiled.re_nsub);
 
     // read in the directions
 	directions = fopen("directions.txt", "r");
@@ -38,7 +36,6 @@ int main(void)
 			y1 = toIntAndFree(copyGroup(matches[3], line));
 			x2 = toIntAndFree(copyGroup(matches[4], line));
 			y2 = toIntAndFree(copyGroup(matches[5], line));
-			printf("%s %d %d %d %d\n", command, x1, y1, x2, y2);
 			if (strcmp(command, CMD_TURN_ON) == 0) {
 				turnOn(lights, x1, y1, x2, y2);
 			} else if (strcmp(command, CMD_TURN_OFF) == 0) {
