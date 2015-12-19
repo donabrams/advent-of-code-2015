@@ -13,10 +13,11 @@ Day 4: Bash
 
 Day 5: LOLCODE
 
+Day 6: C
+
 Others coming:
 * Ruby
 * Python
-* C
 * C++
 * C#
 * ObjC
