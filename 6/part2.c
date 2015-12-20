@@ -1,4 +1,4 @@
-#include "main.h"
+#include "part2.h"
 
 int main(void)
 {
@@ -48,7 +48,7 @@ int main(void)
 		}
 	}
 
-	printf("num lights lit: %d\n", numLitLights(lights));
+	printf("total brightness: %d\n", brightness(lights));
 
 	freeLights(lights);
   	regfree(&regexCompiled);
@@ -75,7 +75,7 @@ int **getLights() {
         lights[i] = malloc(1000*sizeof(int));
         int j;
         for (j = 0; j < 1000; j++) {
-        	lights[i][j] = LIGHT_OFF;
+        	lights[i][j] = 0;
         }
     }
     return lights;
@@ -101,7 +101,7 @@ void turnOn(int **lights, int x1, int y1, int x2, int y2) {
 	for (x = x1; x <= x2; x++) {
 		int y;
 		for (y = y1; y <= y2; y++) {
-			lights[x][y] = LIGHT_ON;
+			lights[x][y] = lights[x][y]+1;
 		}
 	}
 }
@@ -111,7 +111,7 @@ void turnOff(int **lights, int x1, int y1, int x2, int y2) {
 	for (x = x1; x <= x2; x++) {
 		int y;
 		for (y = y1; y <= y2; y++) {
-			lights[x][y] = LIGHT_OFF;
+			lights[x][y] = lights[x][y] == 0 ? 0 : (lights[x][y]-1);
 		}
 	}
 }
@@ -121,21 +121,19 @@ void toggle(int **lights, int x1, int y1, int x2, int y2) {
 	for (x = x1; x <= x2; x++) {
 		int y;
 		for (y = y1; y <= y2; y++) {
-			lights[x][y] = lights[x][y] == LIGHT_ON ? LIGHT_OFF : LIGHT_ON;
+			lights[x][y] = lights[x][y]+2;
 		}
 	}
 }
 
-int numLitLights(int **lights) {
-	int count = 0;
+int brightness(int **lights) {
+	int brightness = 0;
 	int x;
 	for (x = 0; x < 1000; x++) {
 		int y;
 		for (y = 0; y < 1000; y++) {
-			if (lights[x][y] == LIGHT_ON) {
-				count++;
-			}
+			brightness += lights[x][y];
 		}
 	}
-	return count;
+	return brightness;
 }
