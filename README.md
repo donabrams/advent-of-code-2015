@@ -15,6 +15,8 @@ Day 5: LOLCODE
 
 Day 6: C
 
+Day 7: Rust
+
 Others coming:
 * Ruby
 * Python
@@ -26,7 +28,6 @@ Others coming:
 * Scala
 * Clojure
 * Racket
-* Rust
 * Purescript
 * Haskell
 * Lua
