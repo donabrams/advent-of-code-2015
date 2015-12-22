@@ -9,6 +9,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::File;
 use std::error::Error;
+use std::mem;
 use regex::Regex;
 
 type GateName = &'static str;
@@ -55,38 +56,73 @@ fn getName(gate: &Gate) -> GateName {
 
 type GateBuilder = fn(&str) -> Option<Gate>;
 
-fn createGate(&gateBuilders: &Vec<GateBuilder>, spec: &str) -> Option<Gate> {
+fn createGate(gateBuilders: Vec<GateBuilder>, spec: &str) -> Option<Gate> {
 	gateBuilders.iter().fold(None, |acc, builder| match acc {
 		None => builder(spec),
 		Some(gate) => Some(gate),
 	})
 }
 
-const valueGateRe : Regex = regex!(r"^(?P<val>\d+) -> (?P<name>[[:alpha:]]+)$");
+fn map2<T, U, V, F: Fn(T, U) -> V>(f: F, a: Option<T>, b: Option<U>) -> Option<V> {
+    match a {
+        Some(x) => match b {
+            Some(y) => Some(f(x, y)),
+            None => None,
+        },
+        None => None,
+    }
+}
+
+fn makeStrStatic(s: &str) -> &'static str {
+    unsafe {
+        let ret = mem::transmute(s as &str);
+        mem::forget(s);
+        ret
+    }
+}
+
+static valueGateRe : Regex = regex!(r"^(?P<val>\d+) -> (?P<name>[[:alpha:]]+)$");
 fn ValueGateBuild(spec: &str) -> Option<Gate> {
 	match valueGateRe.captures(spec) {
-		Some(capture) => match &capturesToVec(capture)[..] {
-			[_, val, name] => match val.parse::<i16>() {
-				Ok(val) => Some(Gate::Value { 
-					name: name, 
+		Some(caps) => {
+			let name = caps.name("name");
+			let val = caps.name("val").and_then(|val: &str| { val.parse::<i16>().ok() });
+			let f = |name: &str, val: i16| {
+				println!("yay {}, boo {}", name, val);
+				Gate::Value { 
+					name: makeStrStatic(name), 
 					val: val,
-				}),
-				Err(E) => None,
-			},
-			_ => None,
+				}
+			};
+			map2(f, name, val)
 		},
 		None => None,
 	}
 }
+// fn ValueGateBuild(spec: &str) -> Option<Gate> {
+// 	match valueGateRe.captures(spec) {
+// 		Some(capture) => match &capturesToVec(capture)[..] {
+// 			[_, val, name] => match val.parse::<i16>() {
+// 				Ok(val) => Some(Gate::Value { 
+// 					name: name, 
+// 					val: val,
+// 				}),
+// 				Err(E) => None,
+// 			},
+// 			_ => None,
+// 		},
+// 		None => None,
+// 	}
+// }
 
-const andGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) AND (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$");
+static andGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) AND (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$");
 fn AndGateBuild(spec: &str) -> Option<Gate> {
 	match andGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, a, b, name] => Some(Gate::And { 
-				name: name, 
-				a: a, 
-				b: b,
+				name: makeStrStatic(name), 
+				a: makeStrStatic(a), 
+				b: makeStrStatic(b),
 			}),
 			_ => None,
 		},
@@ -94,14 +130,14 @@ fn AndGateBuild(spec: &str) -> Option<Gate> {
 	}
 }
 
-const orGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) OR (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$");
+static orGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) OR (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$");
 fn OrGateBuild(spec: &str) -> Option<Gate> {
 	match orGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, a, b, name] => Some(Gate::Or {
-				name: name, 
-				a: a, 
-				b: b,
+				name: makeStrStatic(name), 
+				a: makeStrStatic(a), 
+				b: makeStrStatic(b),
 			}),
 			_ => None,
 		},
@@ -109,14 +145,14 @@ fn OrGateBuild(spec: &str) -> Option<Gate> {
 	}
 }
 
-const lshiftGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) LSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$");
+static lshiftGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) LSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$");
 fn LshiftGateBuild(spec: &str) -> Option<Gate> {
 	match lshiftGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, a, numBits, name] => match numBits.parse::<i16>() {
 				Ok(numBits) => Some(Gate::Lshift {
-					name: name, 
-					a: a, 
+					name: makeStrStatic(name), 
+					a: makeStrStatic(a), 
 					numBits: numBits,
 				}),
 				Err(E) => None,
@@ -127,14 +163,14 @@ fn LshiftGateBuild(spec: &str) -> Option<Gate> {
 	}
 }
 
-const rshiftGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) RSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$");
+static rshiftGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) RSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$");
 fn RshiftGateBuild(spec: &str) -> Option<Gate> {
 	match rshiftGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, a, numBits, name] => match numBits.parse::<i16>() {
 				Ok(numBits) => Some(Gate::Rshift {
-					name: name, 
-					a: a, 
+					name: makeStrStatic(name), 
+					a: makeStrStatic(a), 
 					numBits: numBits,
 				}),
 				Err(E) => None,
@@ -145,13 +181,13 @@ fn RshiftGateBuild(spec: &str) -> Option<Gate> {
 	}
 }
 
-const notGateRe : Regex = regex!(r"^NOT (?P<a>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)");
+static notGateRe : Regex = regex!(r"^NOT (?P<a>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)");
 fn NotGateBuild(spec: &str) -> Option<Gate>{
 	match notGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, a, name] => Some(Gate::Not {
-				name: name, 
-				a: a,
+				name: makeStrStatic(name), 
+				a: makeStrStatic(a),
 			}),
 			_ => None,
 		},
@@ -170,7 +206,7 @@ fn capturesToVec(captures: regex::Captures) -> Vec<&str> {
 	vec
 }
 
-fn go(&gateBuilders: &Vec<GateBuilder>) -> Result<i16, Box<Error>> {
+fn go(gateBuilders: Vec<GateBuilder>) -> Result<i16, Box<Error>> {
 	let mut computer = Computer::new();
 	{
 		let mut f = try!(File::open("gates.txt"));
@@ -178,7 +214,7 @@ fn go(&gateBuilders: &Vec<GateBuilder>) -> Result<i16, Box<Error>> {
 		let mut buffer = String::new();
 		loop {
 			try!(reader.read_line(&mut buffer));
-			match createGate(&gateBuilders, buffer.as_str()) {
+			match createGate(gateBuilders, buffer.as_str()) {
 				Some(gate) => {
 					computer.insert(getName(&gate), gate);
 					continue;
@@ -201,7 +237,7 @@ fn main() {
 		RshiftGateBuild, 
 		NotGateBuild,
 	];
-	match go(&gateBuilders) {
+	match go(gateBuilders) {
 		Ok(val) => println!("Value of gate a: {}", val),
 		Err(e) => println!("Error: {}", e.to_string()),
 	}
