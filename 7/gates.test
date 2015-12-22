@@ -1,0 +1,17 @@
+1 -> a
+2 -> b
+3 -> c
+a AND b -> d
+a OR b -> e
+NOT c -> f
+NOT f -> g
+a RSHIFT 1 -> h
+b LSHIFT 1 -> i
+a LSHIFT 3 -> j
+d AND e -> k
+f AND g -> l
+h AND i -> m
+j AND k -> n
+l AND m -> o
+m AND n -> p
+o AND p -> q
