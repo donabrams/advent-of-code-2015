@@ -1,4 +1,6 @@
 #![feature(slice_patterns)]
+#![feature(plugin)]
+#![plugin(regex_macros)]
 extern crate regex;
 
 use std::collections::HashMap;
@@ -9,31 +11,31 @@ use std::fs::File;
 use std::error::Error;
 use regex::Regex;
 
-type GateName = String;
+type GateName = &'static str;
 
 enum Gate {
-	Value(GateName, i16), 
-	And(GateName, GateName, GateName), 
-	Or(GateName, GateName, GateName),
-	Lshift(GateName, GateName, i16), 
-	Rshift(GateName, GateName, i16), 
-	Not(GateName, GateName),
+	Value { name: GateName, val: i16 },
+	And { name: GateName, a: GateName, b: GateName },
+	Or { name: GateName, a: GateName, b: GateName },
+	Lshift { name: GateName, a: GateName, numBits: i16 },
+	Rshift { name: GateName, a: GateName, numBits: i16 },
+	Not { name: GateName, a: GateName },
 }
 
 type Computer = HashMap<GateName, Gate>;
 
 fn getValue(computer: &Computer, gate: &Gate) -> i16 {
 	match *gate {
-		Gate::Value(_, ref val) => *val,
-		Gate::And(_, ref a, ref b) => getGateValue(computer, &a) & getGateValue(computer, &b),
-		Gate::Or(_, ref a, ref b) => getGateValue(computer, &a) | getGateValue(computer, &b),
-		Gate::Lshift(_, ref a, ref numBits) => getGateValue(computer, &a) << numBits,
-		Gate::Rshift(_, ref a, ref numBits) => getGateValue(computer, &a) >> numBits,
-		Gate::Not(_, ref a) => !getGateValue(computer, &a),
+		Gate::Value { name, val } => val,
+		Gate::And { name, a, b } => getGateValue(computer, a) & getGateValue(computer, b),
+		Gate::Or { name, a, b } => getGateValue(computer, a) | getGateValue(computer, b),
+		Gate::Lshift { name, a, numBits} => getGateValue(computer, a) << numBits,
+		Gate::Rshift { name, a, numBits} => getGateValue(computer, a) >> numBits,
+		Gate::Not { name, a } => !getGateValue(computer, a),
 	}
 }
 
-fn getGateValue(computer: &Computer, name: &str) -> i16 {
+fn getGateValue(computer: &Computer, name: GateName) -> i16 {
 	match computer.get(name) {
 		Some(gate) => getValue(computer, gate),
 		None => 0,
@@ -42,29 +44,33 @@ fn getGateValue(computer: &Computer, name: &str) -> i16 {
 
 fn getName(gate: &Gate) -> GateName {
 	match *gate {
-		Gate::Value(ref name, _) => name,
-		Gate::And(ref name, _, _) => name,
-		Gate::Or(ref name, _, _) => name,
-		Gate::Lshift(ref name, _, _) => name,
-		Gate::Rshift(ref name, _, _) => name,
-		Gate::Not(ref name, _) => name,
+		Gate::Value { name, val } => name,
+		Gate::And { name, a, b } => name,
+		Gate::Or { name, a, b } => name,
+		Gate::Lshift { name, a, numBits } => name,
+		Gate::Rshift { name, a, numBits } => name,
+		Gate::Not { name, a } => name,
 	}
 }
 
-type GateBuilder = fn(Regex, &str) -> Option<Gate>;
+type GateBuilder = fn(&str) -> Option<Gate>;
 
-fn createGate(&gateBuilders: &Vec<GateBuilder>, &regexes: &Vec<Regex>, spec: &str) -> Option<Gate> {
-	gateBuilders.iter().enumerate().fold(None, |acc, (i, builder)| match acc {
-		None => builder(regexes[i], spec),
+fn createGate(&gateBuilders: &Vec<GateBuilder>, spec: &str) -> Option<Gate> {
+	gateBuilders.iter().fold(None, |acc, builder| match acc {
+		None => builder(spec),
 		Some(gate) => Some(gate),
 	})
 }
 
-fn ValueGateBuild(valueGateRe: Regex, spec: &str) -> Option<Gate> {
+const valueGateRe : Regex = regex!(r"^(?P<val>\d+) -> (?P<name>[[:alpha:]]+)$");
+fn ValueGateBuild(spec: &str) -> Option<Gate> {
 	match valueGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, val, name] => match val.parse::<i16>() {
-				Ok(val) => Some(Gate::Value(name.to_string(), val)),
+				Ok(val) => Some(Gate::Value { 
+					name: name, 
+					val: val,
+				}),
 				Err(E) => None,
 			},
 			_ => None,
@@ -73,31 +79,46 @@ fn ValueGateBuild(valueGateRe: Regex, spec: &str) -> Option<Gate> {
 	}
 }
 
-fn AndGateBuild(andGateRe: Regex, spec: &str) -> Option<Gate> {
+const andGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) AND (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$");
+fn AndGateBuild(spec: &str) -> Option<Gate> {
 	match andGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
-			[_, a, b, name] => Some(Gate::And(name.to_string(), a.to_string(), b.to_string())),
+			[_, a, b, name] => Some(Gate::And { 
+				name: name, 
+				a: a, 
+				b: b,
+			}),
 			_ => None,
 		},
 		None => None,
 	}
 }
 
-fn OrGateBuild(orGateRe: Regex, spec: &str) -> Option<Gate> {
+const orGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) OR (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$");
+fn OrGateBuild(spec: &str) -> Option<Gate> {
 	match orGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
-			[_, a, b, name] => Some(Gate::Or(name.to_string(), a.to_string(), b.to_string())),
+			[_, a, b, name] => Some(Gate::Or {
+				name: name, 
+				a: a, 
+				b: b,
+			}),
 			_ => None,
 		},
 		None => None,
 	}
 }
 
-fn LshiftGateBuild(lshiftGateRe: Regex, spec: &str) -> Option<Gate> {
+const lshiftGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) LSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$");
+fn LshiftGateBuild(spec: &str) -> Option<Gate> {
 	match lshiftGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, a, numBits, name] => match numBits.parse::<i16>() {
-				Ok(numBits) => Some(Gate::Lshift(name.to_string(), a.to_string(), numBits)),
+				Ok(numBits) => Some(Gate::Lshift {
+					name: name, 
+					a: a, 
+					numBits: numBits,
+				}),
 				Err(E) => None,
 			},
 			_ => None,
@@ -106,11 +127,16 @@ fn LshiftGateBuild(lshiftGateRe: Regex, spec: &str) -> Option<Gate> {
 	}
 }
 
-fn RshiftGateBuild(rshiftGateRe: Regex, spec: &str) -> Option<Gate> {
+const rshiftGateRe : Regex = regex!(r"^(?P<a>[[:alpha:]]+) RSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$");
+fn RshiftGateBuild(spec: &str) -> Option<Gate> {
 	match rshiftGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
 			[_, a, numBits, name] => match numBits.parse::<i16>() {
-				Ok(numBits) => Some(Gate::Rshift(name.to_string(), a.to_string(), numBits)),
+				Ok(numBits) => Some(Gate::Rshift {
+					name: name, 
+					a: a, 
+					numBits: numBits,
+				}),
 				Err(E) => None,
 			},
 			_ => None,
@@ -119,10 +145,14 @@ fn RshiftGateBuild(rshiftGateRe: Regex, spec: &str) -> Option<Gate> {
 	}
 }
 
-fn NotGateBuild(notGateRe: Regex, spec: &str) -> Option<Gate>{
+const notGateRe : Regex = regex!(r"^NOT (?P<a>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)");
+fn NotGateBuild(spec: &str) -> Option<Gate>{
 	match notGateRe.captures(spec) {
 		Some(capture) => match &capturesToVec(capture)[..] {
-			[_, a, name] => Some(Gate::Not(name.to_string(), a.to_string())),
+			[_, a, name] => Some(Gate::Not {
+				name: name, 
+				a: a,
+			}),
 			_ => None,
 		},
 		None => None,
@@ -140,7 +170,7 @@ fn capturesToVec(captures: regex::Captures) -> Vec<&str> {
 	vec
 }
 
-fn go(&regexes: &Vec<Regex>, &gateBuilders: &Vec<GateBuilder>) -> Result<i16, Box<Error>> {
+fn go(&gateBuilders: &Vec<GateBuilder>) -> Result<i16, Box<Error>> {
 	let mut computer = Computer::new();
 	{
 		let mut f = try!(File::open("gates.txt"));
@@ -148,7 +178,7 @@ fn go(&regexes: &Vec<Regex>, &gateBuilders: &Vec<GateBuilder>) -> Result<i16, Bo
 		let mut buffer = String::new();
 		loop {
 			try!(reader.read_line(&mut buffer));
-			match createGate(&gateBuilders, &regexes, &buffer) {
+			match createGate(&gateBuilders, buffer.as_str()) {
 				Some(gate) => {
 					computer.insert(getName(&gate), gate);
 					continue;
@@ -163,20 +193,6 @@ fn go(&regexes: &Vec<Regex>, &gateBuilders: &Vec<GateBuilder>) -> Result<i16, Bo
 }
 
 fn main() {
-	let valueGateRe: Regex = Regex::new(r"^(?P<val>\d+) -> (?P<name>[[:alpha:]]+)$").unwrap();
-	let andGateRe: Regex = Regex::new(r"^(?P<a>[[:alpha:]]+) AND (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$").unwrap();
-	let orGateRe: Regex = Regex::new(r"^(?P<a>[[:alpha:]]+) OR (?P<b>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)$").unwrap();
-	let lshiftGateRe: Regex = Regex::new(r"^(?P<a>[[:alpha:]]+) LSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$").unwrap();
-	let rshiftGateRe: Regex = Regex::new(r"^(?P<a>[[:alpha:]]+) RSHIFT (?P<numBits>\d+) -> (?P<name>[[:alpha:]]+)$").unwrap();
-	let notGateRe: Regex = Regex::new(r"^NOT (?P<a>[[:alpha:]]+) -> (?P<name>[[:alpha:]]+)").unwrap();
-	let regexes: Vec<Regex> = vec![
-		valueGateRe, 
-		andGateRe, 
-		orGateRe, 
-		lshiftGateRe, 
-		rshiftGateRe, 
-		notGateRe,
-	];
 	let gateBuilders: Vec<GateBuilder> = vec![
 		ValueGateBuild, 
 		AndGateBuild, 
@@ -185,7 +201,7 @@ fn main() {
 		RshiftGateBuild, 
 		NotGateBuild,
 	];
-	match go(&regexes, &gateBuilders) {
+	match go(&gateBuilders) {
 		Ok(val) => println!("Value of gate a: {}", val),
 		Err(e) => println!("Error: {}", e.to_string()),
 	}

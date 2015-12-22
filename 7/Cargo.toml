@@ -5,3 +5,4 @@ authors = ["Don Abrams <donabrams@gmail.com>"]
 
 [dependencies]
 regex = "0.1"
+regex_macros = "0.1"
