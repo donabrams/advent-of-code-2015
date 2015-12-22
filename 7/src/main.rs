@@ -89,6 +89,7 @@ fn get_value<'a>(computer: &'a Computer, gate: &'a Gate,
 		&Gate::Rshift { ref a, num_bits, ..} => gate_value(&computer, &a, &mut cache) >> num_bits,
 		&Gate::Not { ref a, .. } => std::u16::MAX ^ gate_value(&computer, &a, &mut cache),
 	};
+	// Not the most efficient place to insert, but makes the borrow checker happier
 	cache.insert(gate, val);
 	val
 }
@@ -109,6 +110,7 @@ fn gate_value<'a>(computer: &'a Computer, name: &GateName,
 
 fn get_name(gate: &Gate) -> GateName {
 	match gate {
+		// I would love to get rid of these clones
 		&Gate::Value { ref name, .. } => name.clone(),
 		&Gate::And { ref name, .. } => name.clone(),
 		&Gate::Or { ref name, .. } => name.clone(),
